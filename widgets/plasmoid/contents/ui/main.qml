@@ -23,6 +23,8 @@ PlasmoidItem {
     property bool interacting: false
     property bool initialized: false
     property bool pendingAction: false
+    property var actionQueue: []
+    readonly property bool controlsBusy: (busy && pendingAction) || actionQueue.length > 0
     property int requestNumber: 0
     property string errorMessage: ""
 
@@ -31,8 +33,11 @@ PlasmoidItem {
     }
 
     function run(command, key, value) {
-        if (busy)
+        if (busy) {
+            if (command !== "status" && command !== "reset")
+                actionQueue = actionQueue.concat([{command, key, value}])
             return
+        }
         let script = decodeURIComponent(Qt.resolvedUrl("../code/bridge.py").toString().replace(/^file:\/\//, ""))
         let source = "python3 " + shellQuote(script) + " " + shellQuote(command)
         if (key !== undefined)
@@ -41,6 +46,17 @@ PlasmoidItem {
         pendingAction = command !== "status" && command !== "reset"
         busy = true
         runner.connectSource(source)
+    }
+
+    function completeRequest(refreshAfterAction = true) {
+        busy = false
+        if (actionQueue.length > 0) {
+            const action = actionQueue[0]
+            actionQueue = actionQueue.slice(1)
+            run(action.command, action.key, action.value)
+        } else if (pendingAction && refreshAfterAction) {
+            refresh()
+        }
     }
 
     function refresh() {
@@ -56,6 +72,14 @@ PlasmoidItem {
 
     Component.onCompleted: refresh()
 
+    ListModel {
+        id: groupModel
+    }
+
+    ListModel {
+        id: sinkModel
+    }
+
     Timer {
         interval: 1500
         running: true
@@ -70,14 +94,18 @@ PlasmoidItem {
 
         onNewData: function(source, data) {
             disconnectSource(source)
-            root.busy = false
             if (Number(data["exit code"]) !== 0) {
                 root.errorMessage = String(data["stderr"] || "Falha ao consultar o áudio.")
+                root.completeRequest(false)
                 return
             }
             if (root.pendingAction) {
                 root.errorMessage = ""
-                root.refresh()
+                root.completeRequest()
+                return
+            }
+            if (root.interacting || root.actionQueue.length > 0) {
+                root.completeRequest()
                 return
             }
             try {
@@ -86,6 +114,8 @@ PlasmoidItem {
                     throw new Error("Resposta inválida do mixer")
                 if (root.initialized && Streams.hasNewStream(root.groups, result.groups))
                     root.expanded = true
+                Streams.syncModel(groupModel, result.groups, "key")
+                Streams.syncModel(sinkModel, result.sinks, "index")
                 root.groups = result.groups
                 root.sinks = result.sinks
                 root.maxVolume = result.maxVolume
@@ -94,6 +124,7 @@ PlasmoidItem {
             } catch (error) {
                 root.errorMessage = String(error)
             }
+            root.completeRequest()
         }
     }
 
@@ -134,12 +165,12 @@ PlasmoidItem {
                 }
 
                 Repeater {
-                    model: root.groups
+                    model: groupModel
 
                     delegate: Controls.GroupBox {
                         id: groupCard
-                        required property var modelData
-                        property var group: modelData
+                        required property var model
+                        property var group: model
                         Layout.fillWidth: true
                         title: group.label
 
@@ -155,22 +186,20 @@ PlasmoidItem {
                                 }
                                 Controls.ToolButton {
                                     icon.name: groupCard.group.muted ? "audio-volume-muted" : "audio-volume-high"
-                                    enabled: !root.busy
+                                    enabled: !root.controlsBusy
                                     display: Controls.AbstractButton.IconOnly
                                     Controls.ToolTip.text: groupCard.group.muted ? "Ativar áudio" : "Silenciar"
                                     Controls.ToolTip.visible: hovered
                                     onClicked: root.run("mute", groupCard.group.key, groupCard.group.muted ? "0" : "1")
                                 }
-                                Controls.Slider {
+                                VolumeSlider {
                                     id: groupSlider
                                     Layout.fillWidth: true
                                     from: 0
                                     to: root.maxVolume
-                                    stepSize: 10
-                                    snapMode: Controls.Slider.SnapAlways
-                                    Kirigami.StyleHints.tickMarkStepSize: 30
+                                    tickInterval: root.maxVolume - (root.maxVolume / 3)
                                     value: groupCard.group.volume
-                                    enabled: !root.busy
+                                    enabled: !root.controlsBusy
                                     onPressedChanged: {
                                         root.interacting = pressed
                                         if (!pressed)
@@ -188,16 +217,16 @@ PlasmoidItem {
                                 Controls.ComboBox {
                                     id: sinkSelector
                                     Layout.fillWidth: true
-                                    model: root.sinks
+                                    model: sinkModel
                                     textRole: "description"
                                     currentIndex: root.sinks.findIndex(sink => sink.index === groupCard.group.sink)
-                                    enabled: !root.busy
+                                    enabled: !root.controlsBusy
                                     onActivated: root.run("sink", groupCard.group.key, root.sinks[index].name)
                                 }
                                 Controls.Button {
                                     text: "Nivelar"
                                     visible: groupCard.group.unbalanced
-                                    enabled: !root.busy
+                                    enabled: !root.controlsBusy
                                     onClicked: root.run("volume", groupCard.group.key, Math.round(groupCard.group.volume))
                                 }
                                 Controls.ToolButton {
@@ -209,10 +238,11 @@ PlasmoidItem {
                             }
 
                             Repeater {
-                                model: root.expandedGroups[groupCard.group.key] ? groupCard.group.streams : []
+                                model: groupCard.group.streams
                                 delegate: RowLayout {
-                                    required property var modelData
-                                    property var stream: modelData
+                                    required property var model
+                                    property var stream: model
+                                    visible: !!root.expandedGroups[groupCard.group.key]
                                     Layout.fillWidth: true
                                     Controls.Label {
                                         text: stream.name
@@ -221,20 +251,19 @@ PlasmoidItem {
                                     }
                                     Controls.ToolButton {
                                         icon.name: stream.muted ? "audio-volume-muted" : "audio-volume-medium"
-                                        enabled: !root.busy
+                                        enabled: !root.controlsBusy
                                         onClicked: root.run("stream-mute", groupCard.group.key,
                                                             stream.index + ":" + (stream.muted ? "0" : "1"))
                                     }
-                                    Controls.Slider {
+                                    VolumeSlider {
                                         id: streamSlider
                                         Layout.fillWidth: true
                                         from: 0
                                         to: root.maxVolume
+                                        tickInterval: root.maxVolume - (root.maxVolume / 3)
                                         stepSize: 1
-                                        snapMode: Controls.Slider.SnapAlways
-                                        Kirigami.StyleHints.tickMarkStepSize: -1
                                         value: stream.volume
-                                        enabled: !root.busy
+                                        enabled: !root.controlsBusy
                                         onPressedChanged: {
                                             root.interacting = pressed
                                             if (!pressed)

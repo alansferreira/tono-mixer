@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Tono Mixer
+GenericName=Mixer por instância
+Comment=Agrupa e calibra saídas de áudio por instância de aplicativo (Teams, Slack…)
+Exec=audio-balance
+Icon=audio-volume-high
+Terminal=false
+Categories=AudioVideo;Audio;Mixer;
+Keywords=volume;mixer;teams;slack;pipewire;
+StartupWMClass=linux-audio-balance

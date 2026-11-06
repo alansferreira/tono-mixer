@@ -244,34 +244,39 @@ PlasmoidItem {
                                     property var stream: model
                                     visible: !!root.expandedGroups[groupCard.group.key]
                                     Layout.fillWidth: true
-                                    Controls.Label {
-                                        text: stream.name
-                                        elide: Text.ElideRight
-                                        Layout.preferredWidth: Kirigami.Units.gridUnit * 5
-                                    }
                                     Controls.ToolButton {
                                         icon.name: stream.muted ? "audio-volume-muted" : "audio-volume-medium"
                                         enabled: !root.controlsBusy
                                         onClicked: root.run("stream-mute", groupCard.group.key,
                                                             stream.index + ":" + (stream.muted ? "0" : "1"))
                                     }
-                                    VolumeSlider {
-                                        id: streamSlider
+                                    ColumnLayout {
                                         Layout.fillWidth: true
-                                        from: 0
-                                        to: root.maxVolume
-                                        tickInterval: root.maxVolume - (root.maxVolume / 3)
-                                        stepSize: 1
-                                        value: stream.volume
-                                        enabled: !root.controlsBusy
-                                        onPressedChanged: {
-                                            root.interacting = pressed
-                                            if (!pressed)
-                                                root.run("stream-volume", groupCard.group.key,
-                                                         stream.index + ":" + Math.round(value))
+                                        spacing: Kirigami.Units.smallSpacing
+
+                                        VolumeSlider {
+                                            id: streamSlider
+                                            Layout.fillWidth: true
+                                            from: 0
+                                            to: root.maxVolume
+                                            tickInterval: root.maxVolume - (root.maxVolume / 3)
+                                            stepSize: 1
+                                            value: stream.volume
+                                            enabled: !root.controlsBusy
+                                            onPressedChanged: {
+                                                root.interacting = pressed
+                                                if (!pressed)
+                                                    root.run("stream-volume", groupCard.group.key,
+                                                             stream.index + ":" + Math.round(value))
+                                            }
+                                            onMoved: if (!pressed) root.run("stream-volume", groupCard.group.key,
+                                                                            stream.index + ":" + Math.round(value))
                                         }
-                                        onMoved: if (!pressed) root.run("stream-volume", groupCard.group.key,
-                                                                        stream.index + ":" + Math.round(value))
+                                        Controls.Label {
+                                            Layout.fillWidth: true
+                                            text: stream.name
+                                            elide: Text.ElideRight
+                                        }
                                     }
                                     Controls.Label { text: Math.round(streamSlider.value) + "%" }
                                 }

@@ -2,6 +2,8 @@
 
 A native Plasma 6 widget that brings per-instance audio controls to the panel or system tray. The original application remains installed and unchanged.
 
+![Print](./docs/assets/widget-print.png)
+
 ## Install
 
 Requirements: KDE Plasma 6 with Plasma5Support's executable data engine, Python 3, `pactl`, and a working `systemd --user` session. Run from the repository root:

@@ -6,6 +6,8 @@ Music, videos, notifications, and other sounds can all play at once — and you 
 
 It works with many kinds of apps, including Firefox, Chrome, VLC, Teams, and Slack.
 
+![Print](./docs/assets/windowed-print.png)
+
 ## What you can do
 
 - **Control audio by app instance:** adjust the volume for a whole group, or expand its card to control each stream individually.

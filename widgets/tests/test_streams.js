@@ -1,0 +1,18 @@
+const assert = require("node:assert/strict")
+const fs = require("node:fs")
+const path = require("node:path")
+const vm = require("node:vm")
+
+const source = fs.readFileSync(path.join(__dirname, "../plasmoid/contents/code/streams.js"), "utf8")
+const context = vm.createContext({})
+vm.runInContext(source, context)
+
+const group = (...indexes) => ({ streams: indexes.map(index => ({ index })) })
+assert.equal(context.hasNewStream([], []), false)
+assert.equal(context.hasNewStream([group(1, 2)], [group(1, 2)]), false)
+assert.equal(context.hasNewStream([group(1, 2)], [group(2)]), false)
+assert.equal(context.hasNewStream([group(1)], [group(1, 2)]), true)
+assert.equal(context.hasNewStream([group(1)], [group(1), group(2)]), true)
+assert.equal(context.hasNewStream([group(1), group(2)], [group(2, 1)]), false)
+assert.equal(context.hasNewStream([], [group(1)]), true)
+console.log("New stream detection tests passed.")

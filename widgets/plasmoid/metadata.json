@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Id": "io.github.alansferreira.tonomixer",
+        "Name": "Tono Mixer",
+        "Description": "Control audio by application instance",
+        "Icon": "audio-volume-high",
+        "Category": "Multimedia",
+        "Version": "2.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-NotificationArea": true,
+    "X-Plasma-NotificationAreaCategory": "Hardware"
+}

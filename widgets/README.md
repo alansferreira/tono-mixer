@@ -1,6 +1,8 @@
-# Tono Mixer v2: Plasma widget
+# Tono Mixer v2.1.0: Plasma widget
 
 A native Plasma 6 widget that brings per-instance audio controls to the panel or system tray. The original application remains installed and unchanged.
+
+[Changelog](CHANGELOG.md)
 
 ![Print](./docs/assets/widget-print.png)
 

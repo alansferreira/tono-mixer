@@ -22,7 +22,7 @@ For updates, run the same installer again. Updating the package does not reload 
 
 Each app instance has a volume slider, mute button, and output selector. **Nivelar** equalizes its streams and channels. Expand a group with **+** to adjust individual streams. The widget saves group volume and output and restores them for new streams while the widget is loaded.
 
-The panel opens automatically when a new visible output stream is detected. Streams already present when the widget starts do not trigger it. The widget checks for changes approximately every 1.5 seconds, so short-lived streams may not be detected.
+The panel opens automatically without taking window focus when a new visible output stream is detected, and closes after 3 seconds. Another new stream or a control action restarts the timer; dragging a slider keeps it open until the interaction ends. A panel opened manually stays open as usual. Streams already present when the widget starts do not trigger it. The widget checks for changes approximately every 1.5 seconds, so short-lived streams may not be detected.
 
 Background checks update existing controls without recreating or disabling them. Group volume ticks are drawn below the slider, independently of the Qt Quick Controls style, at 30-percentage-point intervals within its range.
 

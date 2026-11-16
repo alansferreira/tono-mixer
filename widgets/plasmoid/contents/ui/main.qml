@@ -33,6 +33,8 @@ PlasmoidItem {
     }
 
     function run(command, key, value) {
+        if (command !== "status" && command !== "reset" && automaticPopup.visible)
+            automaticPopup.showTemporarily()
         if (busy) {
             if (command !== "status" && command !== "reset")
                 actionQueue = actionQueue.concat([{command, key, value}])
@@ -72,6 +74,11 @@ PlasmoidItem {
 
     Component.onCompleted: refresh()
 
+    onExpandedChanged: {
+        if (expanded)
+            automaticPopup.visible = false
+    }
+
     ListModel {
         id: groupModel
     }
@@ -85,6 +92,19 @@ PlasmoidItem {
         running: true
         repeat: true
         onTriggered: root.refresh()
+    }
+
+    AutomaticPopup {
+        id: automaticPopup
+        visualParent: root
+        location: Plasmoid.location
+        interacting: root.interacting
+        mainItem: Loader {
+            width: Kirigami.Units.gridUnit * 24
+            height: Kirigami.Units.gridUnit * 25
+            active: automaticPopup.visible
+            sourceComponent: root.fullRepresentation
+        }
     }
 
     Plasma5Support.DataSource {
@@ -112,8 +132,9 @@ PlasmoidItem {
                 let result = JSON.parse(data["stdout"])
                 if (!Array.isArray(result.groups) || !Array.isArray(result.sinks))
                     throw new Error("Resposta inválida do mixer")
-                if (root.initialized && Streams.hasNewStream(root.groups, result.groups))
-                    root.expanded = true
+                if (root.initialized && !root.expanded && Streams.hasNewStream(root.groups, result.groups))
+                    automaticPopup.showTemporarily()
+
                 Streams.syncModel(groupModel, result.groups, "key")
                 Streams.syncModel(sinkModel, result.sinks, "index")
                 root.groups = result.groups

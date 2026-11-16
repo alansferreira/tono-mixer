@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import QtTest
 import "../plasmoid/contents/ui"
 import "../plasmoid/contents/code/streams.js" as Streams
@@ -19,6 +20,27 @@ TestCase {
             to: 150
             tickInterval: 30
             stepSize: 10
+        }
+    }
+
+    Component {
+        id: popupComponent
+        AutomaticPopup {
+            visualParent: testCase
+            timeout: 200
+            mainItem: Item {
+                width: 100
+                height: 100
+            }
+        }
+    }
+
+    Component {
+        id: focusWindowComponent
+        Window {
+            width: 100
+            height: 100
+            visible: true
         }
     }
 
@@ -100,6 +122,56 @@ TestCase {
         mouseRelease(slider, slider.width * 0.63, slider.height / 2)
         compare(control.pressed, false)
         compare(control.value % 10, 0)
+    }
+
+    function test_automaticPopupTimeout() {
+        const popup = createTemporaryObject(popupComponent, testCase)
+        verify(popup !== null)
+        verify((popup.flags & Qt.WindowDoesNotAcceptFocus) !== 0)
+        popup.showTemporarily()
+        compare(popup.visible, true)
+        wait(120)
+        popup.showTemporarily()
+        wait(120)
+        compare(popup.visible, true)
+        tryCompare(popup, "visible", false, 500)
+    }
+
+    function test_automaticPopupDoesNotActivate() {
+        const popup = createTemporaryObject(popupComponent, testCase)
+        verify(popup !== null)
+        const otherWindow = createTemporaryObject(focusWindowComponent, testCase)
+        verify(otherWindow !== null)
+        otherWindow.requestActivate()
+        tryCompare(otherWindow, "active", true)
+        popup.showTemporarily()
+        wait(100)
+        compare(otherWindow.active, true)
+    }
+
+    function test_automaticPopupInteraction() {
+        const popup = createTemporaryObject(popupComponent, testCase)
+        verify(popup !== null)
+        popup.showTemporarily()
+        popup.interacting = true
+        wait(300)
+        compare(popup.visible, true)
+        popup.interacting = false
+        wait(120)
+        compare(popup.visible, true)
+        tryCompare(popup, "visible", false, 500)
+    }
+
+    function test_automaticPopupManualClose() {
+        const popup = createTemporaryObject(popupComponent, testCase)
+        verify(popup !== null)
+        popup.showTemporarily()
+        popup.visible = false
+        wait(120)
+        popup.showTemporarily()
+        wait(120)
+        compare(popup.visible, true)
+        tryCompare(popup, "visible", false, 500)
     }
 
     function snapshot(volume) {
